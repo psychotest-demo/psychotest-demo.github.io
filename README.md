@@ -1,2 +1,5 @@
-# xin-xing-experiment-demo
-心行实验公开测试版 · GitHub Pages
+# 心行实验测试版
+
+本仓库部署公开测试页面。对话和问卷暂存在当前浏览器会话。为了生成回复，发送的文字由服务端接口交给 DeepSeek 处理。
+
+字体使用霞鹜文楷屏幕阅读版。字体许可见 fonts/OFL.txt。
