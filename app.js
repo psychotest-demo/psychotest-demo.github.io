@@ -496,12 +496,18 @@ function showAchievement(name, ...lines) {
   for (const line of lines) copy.append(field('small', line));
   const close = button('×', 'achievement-close');
   close.setAttribute('aria-label', '关闭成就提示');
-  close.addEventListener('click', () => {
-    achievement.replaceChildren();
-    app.querySelector('h1').focus({ preventScroll: true });
-  });
+  function dismiss() {
+    const restoreFocus = document.activeElement === close;
+    card.remove();
+    if (restoreFocus) app.querySelector('h1').focus({ preventScroll: true });
+  }
   card.append(badge, copy, close);
   achievement.replaceChildren(card);
+  const timeout = setTimeout(dismiss, 6500);
+  close.addEventListener('click', () => {
+    clearTimeout(timeout);
+    dismiss();
+  });
 }
 
 function render(focus = false) {
