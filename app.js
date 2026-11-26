@@ -55,9 +55,14 @@ async function submit(path, body, error, waiting, thread, signal) {
   try {
     const result = await request(path, { body: { ...body, requestId: crypto.randomUUID() }, signal });
     state = (await result.json()).state;
-    if (path === '/api/back') achievement.replaceChildren();
+    if (['/api/back', '/api/survey/start', '/api/exit'].includes(path)) achievement.replaceChildren();
     render(true);
-    if (path === '/api/survey' && state.status === 'complete') showAchievement();
+    if (path === '/api/dialogue/end' && state.stage === 'surveyIntro') {
+      showAchievement('双方均已离席', '你结束了对话。', '助手还坐在原地，因为它没有腿。');
+    }
+    if (path === '/api/survey' && state.status === 'complete') {
+      showAchievement('此时情绪此时天', '完成网页的全部探索');
+    }
   } catch (err) {
     if (!signal?.aborted) setFeedback(error, err.message);
   } finally {
@@ -482,12 +487,13 @@ function endPage() {
   return flow(section);
 }
 
-function showAchievement() {
+function showAchievement(name, ...lines) {
   const card = field('div', '', 'achievement-card');
   const badge = field('span', '✦', 'achievement-mark');
   badge.setAttribute('aria-hidden', 'true');
   const copy = field('div');
-  copy.append(field('p', '成就', 'achievement-heading'), field('strong', '此时情绪此时天'), field('small', '完成网页的全部探索'));
+  copy.append(field('p', '成就', 'achievement-heading'), field('strong', name));
+  for (const line of lines) copy.append(field('small', line));
   const close = button('×', 'achievement-close');
   close.setAttribute('aria-label', '关闭成就提示');
   close.addEventListener('click', () => {
