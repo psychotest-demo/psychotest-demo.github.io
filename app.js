@@ -1,4 +1,4 @@
-import { demoRequest, resetDemo, updateDraft } from './demo.js';
+import { demoRequest, resetDemo, updateDraft } from './demo.js?v=20261126';
 import { screens, agreement, opener } from './questions.js';
 
 const app = document.querySelector('#app');
@@ -23,6 +23,7 @@ let config;
 let state;
 let busy = false;
 let pendingReply;
+let cancelVoice;
 
 const request = demoRequest;
 
@@ -32,6 +33,7 @@ function setFeedback(target, message) {
 
 async function submit(path, body, error, waiting, thread, signal) {
   if (busy) return;
+  cancelVoice?.();
   busy = true;
   const previous = [...app.querySelectorAll('button')]
     .filter(node => !signal || !node.classList.contains('end-dialogue'))
@@ -150,8 +152,8 @@ function flow(section) {
     const progress = field('ol', '', 'progress');
     progress.setAttribute('aria-label', '实验进度');
     const inChat = state.stage === 'chat';
-    const current = inChat ? Math.min(state.round - 1, 4) : { surveyIntro: 0, presence: 1, post: 2, background: 3 }[state.stage];
-    const labels = inChat ? ['第 1 轮', '第 2 轮', '第 3 轮', '第 4 轮'] : ['问卷说明', '对话感受', '体验反馈', '基本信息'];
+    const current = inChat ? Math.min(state.round - 1, 4) : { surveyIntro: 0, surveyCount: 1, presence: 2, post: 3, background: 4 }[state.stage];
+    const labels = inChat ? ['第 1 轮', '第 2 轮', '第 3 轮', '第 4 轮'] : ['问卷邀请', '题量说明', '对话感受', '体验反馈', '基本信息'];
     if (inChat && state.round > 4) labels.push('继续对话');
     for (const [i, name] of labels.entries()) {
       const li = field('li', name);
@@ -166,7 +168,15 @@ function flow(section) {
 
 function messageBubble(sender, label, text) {
   const item = field('li', '', 'message message--' + sender);
-  item.append(field('span', label, 'message-sender'), field('p', text, 'message-bubble'));
+  const attribution = field('span', '', 'message-attribution');
+  if (sender === 'assistant') {
+    const avatar = field('span', '', 'assistant-avatar ' + (state.group === 1 ? 'avatar-cat' : 'avatar-ring'));
+    avatar.setAttribute('aria-hidden', 'true');
+    if (state.group === 1) avatar.append(field('span', '', 'cat-face'));
+    attribution.append(avatar);
+  }
+  attribution.append(field('span', label));
+  item.append(attribution, field('p', text, 'message-bubble'));
   return item;
 }
 
@@ -189,6 +199,96 @@ function dialogueThread() {
     }
   }
   return thread;
+}
+
+function voiceControl(input) {
+  const row = field('div', '', 'voice-input');
+  const trigger = button('语音输入', 'secondary voice-button');
+  const note = field('p', '', 'hint voice-hint');
+  note.id = 'voice-hint';
+  note.setAttribute('role', 'status');
+  trigger.setAttribute('aria-describedby', note.id);
+  row.append(trigger, note);
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    trigger.disabled = true;
+    note.textContent = '当前浏览器不支持网页语音输入。你仍可打字，或使用系统键盘的听写功能。';
+    return row;
+  }
+
+  const idle = '使用前需允许麦克风。浏览器可能将音频交给其语音识别服务。识别成文字后可编辑，再手动发送。';
+  note.textContent = idle;
+  let active;
+  let stopping = false;
+  function release() {
+    active = undefined;
+    cancelVoice = undefined;
+    stopping = false;
+    trigger.textContent = '语音输入';
+    trigger.setAttribute('aria-pressed', 'false');
+  }
+  trigger.setAttribute('aria-pressed', 'false');
+  trigger.addEventListener('click', () => {
+    if (active) {
+      if (stopping) return;
+      stopping = true;
+      note.textContent = '正在转成文字…';
+      active.stop();
+      return;
+    }
+    if (input.value.length >= input.maxLength) {
+      note.textContent = '输入已达 420 字，请删减后再使用语音输入。';
+      return;
+    }
+    const recognition = new Recognition();
+    recognition.lang = 'zh-CN';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    let received = false;
+    recognition.onresult = event => {
+      if (active !== recognition) return;
+      const transcript = Array.from(event.results).map(result => result[0].transcript).join('').trim();
+      if (!transcript) return;
+      received = true;
+      const separator = input.value && !/\s$/.test(input.value) ? ' ' : '';
+      const combined = input.value + separator + transcript;
+      input.value = combined.slice(0, input.maxLength);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      note.textContent = combined.length > input.maxLength
+        ? '已填入识别文字。超出 420 字的部分已截去，可检查后发送。'
+        : '已填入识别文字，可编辑后发送。';
+    };
+    recognition.onerror = event => {
+      if (active !== recognition) return;
+      release();
+      note.textContent = ['not-allowed', 'service-not-allowed'].includes(event.error)
+        ? '无法使用语音识别。请检查麦克风权限，也可以直接打字。'
+        : event.error === 'no-speech'
+          ? '没有识别到语音。请重试或直接打字。'
+          : '语音识别暂不可用。请重试或直接打字。';
+    };
+    recognition.onend = () => {
+      if (active !== recognition) return;
+      release();
+      if (!received) note.textContent = '没有识别到语音。请重试或直接打字。';
+    };
+    active = recognition;
+    cancelVoice = () => {
+      release();
+      recognition.abort();
+      note.textContent = idle;
+    };
+    try {
+      recognition.start();
+      trigger.textContent = '结束语音输入';
+      trigger.setAttribute('aria-pressed', 'true');
+      note.textContent = '正在听写，请说话。';
+    } catch {
+      release();
+      note.textContent = '语音识别暂不可用。请重试或直接打字。';
+    }
+  });
+  return row;
 }
 
 function chatPage() {
@@ -235,7 +335,7 @@ function chatPage() {
   const skip = button('跳过本轮', 'link-button');
   const error = errorLine();
   actions.append(button('发送回复', 'primary', 'submit'), skip);
-  form.append(label, input, help, sendHint, actions, error);
+  form.append(label, input, help, voiceControl(input), sendHint, actions, error);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (!input.value.trim()) return void setFeedback(error, '请填写内容，或选择跳过本轮。');
@@ -304,6 +404,23 @@ function surveyIntroPage() {
   section.append(field('p', '如果你愿意，想请你再花几分钟填一份简短问卷。你的回答会帮助我们了解这款产品还有哪些地方需要改进。没有标准答案，按自己的感受填写就好。'));
   section.append(field('p', '填写完全自愿。你可以跳过任何题目，或者现在结束体验。测试版的答案只暂存在当前浏览器会话。', 'hint'));
   const actions = field('div', '', 'button-row');
+  const begin = button('查看问卷说明');
+  const decline = button('暂不填写', 'link-button');
+  const error = errorLine();
+  begin.addEventListener('click', () => submit('/api/survey/start', {}, error, '正在打开问卷…'));
+  decline.addEventListener('click', () => submit('/api/exit', {}, error, '正在结束体验…'));
+  actions.append(begin, decline);
+  section.append(actions, error);
+  return flow(section);
+}
+
+function surveyCountPage() {
+  const section = field('section', '', 'sheet');
+  const questionCount = Object.values(screens).reduce((total, screen) => total + screen.questions.length, 0);
+  section.append(title('填写前说明'));
+  section.append(field('p', '这份问卷共有 ' + questionCount + ' 道题，分三页呈现。', 'sheet-lead'));
+  section.append(field('p', '请按刚才的对话体验和自己的实际情况作答。每道题都可以跳过，性别等基本信息在最后一页。'));
+  const actions = field('div', '', 'button-row');
   const begin = button('开始填写问卷');
   const decline = button('暂不填写', 'link-button');
   const error = errorLine();
@@ -370,7 +487,7 @@ function showAchievement() {
   const badge = field('span', '✦', 'achievement-mark');
   badge.setAttribute('aria-hidden', 'true');
   const copy = field('div');
-  copy.append(field('strong', '此时情绪此时天'), field('small', '完成网页的全部探索'));
+  copy.append(field('p', '成就', 'achievement-heading'), field('strong', '此时情绪此时天'), field('small', '完成网页的全部探索'));
   const close = button('×', 'achievement-close');
   close.setAttribute('aria-label', '关闭成就提示');
   close.addEventListener('click', () => {
@@ -386,7 +503,7 @@ function render(focus = false) {
   modeLabel.hidden = config.mode !== 'demo';
   exit.hidden = !state || state.stage === 'done';
   previousPage.disabled = !state;
-  const pages = { chat: chatPage, surveyIntro: surveyIntroPage, done: endPage };
+  const pages = { chat: chatPage, surveyIntro: surveyIntroPage, surveyCount: surveyCountPage, done: endPage };
   app.replaceChildren(state ? (pages[state.stage] ?? surveyPage)() : consentPage());
   const thread = app.querySelector('.conversation');
   if (thread) scrollToLatest(thread);
@@ -402,7 +519,7 @@ previousPage.addEventListener('click', () => {
   submit('/api/back', {}, error, '正在返回…');
 });
 
-exit.addEventListener('click', () => { dialog.returnValue = ''; dialog.showModal(); });
+exit.addEventListener('click', () => { cancelVoice?.(); dialog.returnValue = ''; dialog.showModal(); });
 dialog.addEventListener('close', () => {
   if (dialog.returnValue === 'exit') {
     let error = app.querySelector('.error');

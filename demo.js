@@ -1,5 +1,5 @@
 const sessionKey = 'xin-xing-demo-four-turns';
-const sequence = ['home', 'chat', 'chat', 'chat', 'chat', 'surveyIntro', 'presence', 'post', 'background', 'done'];
+const sequence = ['home', 'chat', 'chat', 'chat', 'chat', 'surveyIntro', 'surveyCount', 'presence', 'post', 'background', 'done'];
 const consent = {
   version: 'demo-v3',
   paragraphs: [
@@ -10,8 +10,17 @@ const consent = {
 };
 const suggestedRounds = 4;
 const surveyIntroIndex = sequence.indexOf('surveyIntro');
-const conditions = ['系统助手', '小暖'];
-const session = () => JSON.parse(sessionStorage.getItem(sessionKey));
+const surveyCountIndex = sequence.indexOf('surveyCount');
+const conditions = ['智能助手', '小暖'];
+function session() {
+  const state = JSON.parse(sessionStorage.getItem(sessionKey));
+  if (!state || state.hasSurveyCount) return state;
+  if (state.index >= surveyCountIndex) state.index += 1;
+  state.drafts = Object.fromEntries(Object.entries(state.drafts).map(([key, value]) =>
+    [Number(key) >= surveyCountIndex ? Number(key) + 1 : key, value]));
+  state.hasSurveyCount = true;
+  return state;
+}
 const save = state => sessionStorage.setItem(sessionKey, JSON.stringify(state));
 const respond = value => ({ json: async () => value });
 
@@ -81,7 +90,7 @@ export async function demoRequest(path, { body, fetcher = fetch, signal } = {}) 
       const group = crypto.getRandomValues(new Uint8Array(1))[0] % conditions.length;
       state = {
         id: 'DEMO-' + crypto.randomUUID().slice(0, 8).toUpperCase(),
-        group, index: 0, rounds: [], drafts: {},
+        group, index: 0, rounds: [], drafts: {}, hasSurveyCount: true,
       };
     }
     if (state.index === 0) state.index = 1;
@@ -120,7 +129,7 @@ export async function demoRequest(path, { body, fetcher = fetch, signal } = {}) 
       state.index = surveyIntroIndex;
       delete state.chatRound;
     } else if (path === '/api/survey/start') {
-      if (stage !== 'surveyIntro') throw Error('请先结束对话。');
+      if (!['surveyIntro', 'surveyCount'].includes(stage)) throw Error('请先结束对话。');
       state.index += 1;
     } else if (path === '/api/survey') {
       if (stage !== body.stage || !['presence', 'post', 'background'].includes(stage)) {

@@ -111,7 +111,61 @@ input[type="checkbox"] { accent-color: var(--brown); width: 1.04rem; height: 1.0
   min-width: 0;
 }
 .message--participant { align-self: flex-end; justify-items: end; }
-.message-sender { color: var(--muted); font-size: .875rem; margin-bottom: .2rem; }
+.message-attribution {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: .25rem;
+  color: var(--muted);
+  font-size: .875rem;
+}
+.assistant-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  flex: none;
+  border-radius: 50%;
+}
+.avatar-ring { background: #795542; }
+.avatar-ring::after {
+  content: '';
+  inline-size: .72rem;
+  block-size: .72rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+.avatar-cat { background: #f4dec2; border: 1px solid #d9bfa1; }
+.cat-face {
+  isolation: isolate;
+  position: relative;
+  inline-size: 1.28rem;
+  block-size: .96rem;
+  margin-top: .2rem;
+  border: 1px solid #a26d46;
+  border-radius: 48%;
+  background:
+    radial-gradient(circle at 28% 47%, #593b32 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 47%, #593b32 0 1px, transparent 1.5px),
+    radial-gradient(ellipse at 50% 69%, #ad6259 0 1px, transparent 1.5px),
+    radial-gradient(ellipse at 22% 71%, #eaa498 0 1.5px, transparent 2px),
+    radial-gradient(ellipse at 78% 71%, #eaa498 0 1.5px, transparent 2px),
+    #fff2df;
+}
+.cat-face::before, .cat-face::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-block-start: -.33rem;
+  inline-size: .41rem;
+  block-size: .43rem;
+  border: 1px solid #a26d46;
+  border-radius: 70% 30% 62% 30%;
+  background: #eaa498;
+}
+.cat-face::before { inset-inline-start: -.02rem; transform: rotate(-22deg); }
+.cat-face::after { inset-inline-end: -.02rem; transform: scaleX(-1) rotate(-22deg); }
 .message-bubble {
   margin: 0;
   padding: .6rem .85rem;
@@ -134,6 +188,16 @@ input[type="checkbox"] { accent-color: var(--brown); width: 1.04rem; height: 1.0
 .dialogue-composer .button-row { margin-top: .45rem; justify-content: space-between; }
 .dialogue-composer .error:empty { margin: 0; }
 .dialogue-composer .under-input > span { flex-shrink: 0; }
+.voice-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .2rem .65rem;
+  margin: .35rem 0 .5rem;
+}
+.voice-input .voice-button { min-height: 44px; }
+.voice-button[aria-pressed="true"] { background: #efe3c7; border-color: #997243; }
+.voice-hint { flex: 1 1 15rem; margin: 0; }
 label[for] { font-weight: 650; display: block; margin-bottom: .3rem; }
 textarea, input[type="text"], input[type="password"], input[type="number"], select {
   width: 100%; display: block; background: #fffefa; border: 1px solid #cabb9d;
@@ -201,6 +265,7 @@ dialog h2 { margin-bottom: .65rem; }
   background: var(--soft);
   color: var(--brown);
 }
+.achievement-heading { margin: 0 0 .12rem; color: var(--brown); font-size: .875rem; font-weight: 700; }
 .achievement strong { display: block; font: 700 1.1rem/1.4 var(--font); }
 .achievement small { display: block; color: var(--muted); font-size: .875rem; }
 .achievement-close {
