@@ -1,5 +1,5 @@
-import { demoRequest, resetDemo, updateDraft } from './demo.js?v=20261126';
-import { screens, agreement, opener } from './questions.js';
+import { demoRequest, resetDemo, updateDraft } from './demo.js?v=product-test-1';
+import { screens, agreement, opener } from './questions.js?v=product-test-1';
 
 const app = document.querySelector('#app');
 const exit = document.querySelector('#exit');
@@ -123,7 +123,7 @@ function consentPage() {
   const panel = field('section', '', 'sheet consent');
   panel.append(title('参与说明'));
   for (const para of config.consent.paragraphs) panel.append(field('p', para));
-  if (config.consent.contact) panel.append(field('p', '研究联系 ' + config.consent.contact, 'contact'));
+  if (config.consent.contact) panel.append(field('p', '联系客服 ' + config.consent.contact, 'contact'));
   const form = field('form');
   if (config.mode === 'live') {
     const invite = inputWithLabel('invite', '邀请码');
@@ -155,7 +155,7 @@ function flow(section) {
   const page = field('div', '', 'flow');
   if (state.stage !== 'done') {
     const progress = field('ol', '', 'progress');
-    progress.setAttribute('aria-label', '实验进度');
+    progress.setAttribute('aria-label', '测试进度');
     const inChat = state.stage === 'chat';
     const current = inChat ? Math.min(state.round - 1, 4) : { surveyIntro: 0, surveyCount: 1, presence: 2, post: 3, background: 4 }[state.stage];
     const labels = inChat ? ['第 1 轮', '第 2 轮', '第 3 轮', '第 4 轮'] : ['问卷邀请', '题量说明', '对话感受', '体验反馈', '基本信息'];
@@ -467,8 +467,8 @@ function endPage() {
   const finished = state.status === 'complete';
   section.append(title(finished ? '感谢你的参与' : '本次参与已结束'));
   if (state.status === 'safety_stop') section.append(field('p', '如果你此刻感到难以应对，可以联系身边信任的人或寻求学校心理支持。'));
-  if (finished) section.append(field('p', '问卷已提交。我们感谢每个参与者的贡献，请期待最终产品上线！'));
-  const code = field('p', '你的研究编号');
+  if (finished) section.append(field('p', '问卷已提交。我们感谢每位参与者的反馈，请期待最终产品上线！'));
+  const code = field('p', '你的测试编号');
   code.append(field('strong', state.id, 'code'));
   section.append(code);
   for (const value of [config.consent.withdrawal, config.consent.contact, config.consent.support]) {
@@ -489,7 +489,7 @@ function endPage() {
 
 function showAchievement(name, ...lines) {
   const card = field('div', '', 'achievement-card');
-  const badge = field('span', '✦', 'achievement-mark');
+  const badge = field('span', '', 'achievement-mark');
   badge.setAttribute('aria-hidden', 'true');
   const copy = field('div');
   copy.append(field('p', '成就', 'achievement-heading'), field('strong', name));

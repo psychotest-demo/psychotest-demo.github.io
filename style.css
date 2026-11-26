@@ -265,6 +265,13 @@ dialog h2 { margin-bottom: .65rem; }
   background: var(--soft);
   color: var(--brown);
 }
+.achievement-mark::before {
+  content: '';
+  width: .85rem;
+  height: .85rem;
+  background: currentColor;
+  clip-path: polygon(50% 0, 64% 36%, 100% 50%, 64% 64%, 50% 100%, 36% 64%, 0 50%, 36% 36%);
+}
 .achievement-heading { margin: 0 0 .12rem; color: var(--brown); font-size: .875rem; font-weight: 700; }
 .achievement strong { display: block; font: 700 1.1rem/1.4 var(--font); }
 .achievement small { display: block; color: var(--muted); font-size: .875rem; }

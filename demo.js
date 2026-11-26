@@ -139,7 +139,7 @@ export async function demoRequest(path, { body, fetcher = fetch, signal } = {}) 
       state.index += 1;
     } else if (path === '/api/exit') {
       state.exited = true;
-    } else throw Error('该操作不适用于流程演示。');
+    } else throw Error('该操作不适用于测试版。');
   }
   save(state);
   return respond({ state: view(state) });
